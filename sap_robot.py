@@ -1,4 +1,5 @@
 import win32com.client
+import subprocess
 import time
 import yaml
 from pathlib import Path
@@ -13,12 +14,56 @@ class SAPRobot:
         self.session = None
         self._connect(system_name)
 
+    def _load_config(self) -> dict:
+        """读取 sap_connections.yaml 配置。"""
+        config_path = Path("sap_connections.yaml")
+        if not config_path.exists():
+            return {}
+        return yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+
+    def _ensure_sap_running(self) -> bool:
+        """确保 SAP Logon Pad 进程已启动，未启动则自动拉起。"""
+        try:
+            win32com.client.GetObject("SAPGUI")
+            return True
+        except Exception:
+            pass
+
+        # SAP GUI 未运行，尝试启动
+        config = self._load_config()
+        sap_path = config.get("sap_client_path",
+                              r"C:\Program Files (x86)\SAP\FrontEnd\SapGui\saplogon.exe")
+        if not Path(sap_path).exists():
+            print(f"SAP Logon 未找到：{sap_path}")
+            print("请在 sap_connections.yaml 中配置 sap_client_path")
+            return False
+
+        print(f"正在启动 SAP Logon：{sap_path}")
+        subprocess.Popen([sap_path])
+
+        # 等待 SAP GUI 注册到 COM
+        for _ in range(15):
+            time.sleep(2)
+            try:
+                win32com.client.GetObject("SAPGUI")
+                print("SAP Logon 启动成功")
+                return True
+            except Exception:
+                continue
+
+        print("SAP Logon 启动超时，请手动打开后重试")
+        return False
+
     def _connect(self, system_name: str = None) -> bool:
         """
-        连接 SAP GUI。优先复用已有会话，没有则自动登录。
+        连接 SAP GUI。优先复用已有会话，没有则自动启动并登录。
+        - SAP GUI 未运行 → 自动启动 SAP Logon Pad
         - 已有会话 → 直接复用
         - 没有会话 → 读取 sap_connections.yaml → 自动登录
         """
+        if not self._ensure_sap_running():
+            return False
+
         try:
             sap_gui_auto = win32com.client.GetObject("SAPGUI")
             application = sap_gui_auto.GetScriptingEngine
@@ -36,26 +81,23 @@ class SAPRobot:
             return self._login(system_name)
         except Exception as e:
             print(f"连接 SAP GUI 失败：{e}")
-            print("请确保 SAP GUI 已打开，且已启用 Scripting")
             return False
 
     def _get_default_system(self) -> str:
         """从 sap_connections.yaml 读取默认系统名。"""
-        config_path = Path("sap_connections.yaml")
-        if not config_path.exists():
+        config = self._load_config()
+        if not config:
             raise FileNotFoundError(
                 "sap_connections.yaml 不存在，请创建凭据配置文件后重试"
             )
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
         return config.get("default", "")
 
     def _login(self, system_name: str) -> bool:
         """读取凭据并登录指定 SAP 系统。"""
-        config_path = Path("sap_connections.yaml")
-        if not config_path.exists():
+        config = self._load_config()
+        if not config:
             print("sap_connections.yaml 不存在，无法自动登录")
             return False
-        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
         conn = next(
             (c for c in config.get("connections", []) if c["name"] == system_name),
             None,
