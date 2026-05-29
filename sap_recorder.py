@@ -16,27 +16,20 @@ def _require(path: str, hint: str):
 
 
 def cmd_start(_):
-    try:
-        import win32com.client
-        utils = win32com.client.GetObject("SAPGUI").Utils
-        Path(SAP_RECORD_DIR).mkdir(exist_ok=True)
-        utils.Record(str(Path(SESSION_VBS).resolve()))
-        print("录制已开启，请在 SAP 中完成操作...")
-        print(f"完成后运行：python sap_recorder.py stop")
-    except Exception as e:
-        print(f"启动录制失败：{e}")
-        print("请确保 SAP GUI 已打开并启用了 Scripting（sapgui/user_scripting=TRUE）")
-        sys.exit(1)
+    Path(SAP_RECORD_DIR).mkdir(exist_ok=True)
+    print("请在 SAP GUI 中手动启动录制：")
+    print("  1. 按 Alt+F12 → 选择 '脚本录制与回放'")
+    print("  2. 指定保存路径（建议保存到项目目录）")
+    print("  3. 点击 '录制' 按钮")
+    print("  4. 在 SAP 中完成你的操作")
+    print(f"  5. 停止录制后运行：python sap_recorder.py parse <你的.vbs文件>")
+    print()
+    print(f"或直接将录制的 .vbs 文件复制到 {SESSION_VBS}")
 
 
 def cmd_stop(_):
-    try:
-        import win32com.client
-        win32com.client.GetObject("SAPGUI").Utils.Stop()
-        print(f"录制停止，文件已保存至 {SESSION_VBS}")
-    except Exception as e:
-        print(f"停止录制失败：{e}")
-        sys.exit(1)
+    print("请在 SAP GUI 中手动停止录制（点击录制对话框中的 '停止' 按钮）")
+    print(f"然后运行：python sap_recorder.py parse")
 
 
 def cmd_parse(args):

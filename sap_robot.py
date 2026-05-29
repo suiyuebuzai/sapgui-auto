@@ -96,12 +96,10 @@ class SAPRobot:
             return False
 
     def open_tcode(self, tcode: str) -> bool:
-        """打开事务码。"""
+        """填写事务码（不按 Enter，由后续 press_key 步骤显式触发）。"""
         try:
             okcd = self.session.findById("wnd[0]/tbar[0]/okcd")
             okcd.Text = tcode
-            self.session.findById("wnd[0]").SendVKey(0)
-            time.sleep(1)
             return True
         except Exception as e:
             print(f"打开事务码 {tcode} 失败：{e}")
