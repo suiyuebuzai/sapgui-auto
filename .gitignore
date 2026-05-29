@@ -1,0 +1,6 @@
+.sap_record/
+sap_connections.yaml
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/

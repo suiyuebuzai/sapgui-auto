@@ -1,0 +1,7 @@
+pywin32
+pyyaml
+anthropic
+mcp>=1.0.0
+fastapi
+uvicorn
+pytest

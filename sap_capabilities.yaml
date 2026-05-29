@@ -1,0 +1,49 @@
+capabilities:
+  - name: 登录SAP
+    description: 登录指定 SAP 系统
+    tcode: ""
+    parameters:
+      - name: system_name
+        description: SAP 系统连接名称（对应 SAP Logon Pad 中的条目名）
+        required: true
+      - name: client
+        description: 集团号
+        required: true
+      - name: user
+        description: 用户名
+        required: true
+      - name: password
+        description: 密码
+        required: true
+      - name: language
+        description: 登录语言
+        required: false
+    steps:
+      - action: open_connection
+        params:
+          system_name_from: system_name
+        description: 打开 SAP 系统连接
+      - action: fill_field
+        params:
+          field: "wnd[0]/usr/txtRSYST-MANDT"
+          value_from: client
+        description: 填写集团号
+      - action: fill_field
+        params:
+          field: "wnd[0]/usr/txtRSYST-BNAME"
+          value_from: user
+        description: 填写用户名
+      - action: fill_field
+        params:
+          field: "wnd[0]/usr/pwdRSYST-BCODE"
+          value_from: password
+        description: 填写密码
+      - action: fill_field
+        params:
+          field: "wnd[0]/usr/txtRSYST-LANGU"
+          value_from: language
+        description: 填写登录语言
+      - action: press_key
+        params:
+          key: ENTER
+        description: 确认登录
