@@ -10,8 +10,19 @@ _client: Optional[anthropic.Anthropic] = None
 def _get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic()
+        import os
+        api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        base_url = os.environ.get("ANTHROPIC_BASE_URL")
+        kwargs = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        _client = anthropic.Anthropic(**kwargs)
     return _client
+
+
+def _get_model() -> str:
+    import os
+    return os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 
 def suggest_capability_meta(steps: List[Dict]) -> Dict[str, str]:
@@ -20,7 +31,7 @@ def suggest_capability_meta(steps: List[Dict]) -> Dict[str, str]:
         f"- {s['action']}: {json.dumps(s['params'], ensure_ascii=False)}" for s in steps
     )
     msg = _get_client().messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=_get_model(),
         max_tokens=200,
         messages=[{"role": "user", "content": (
             f"你是 SAP 业务专家。根据以下操作步骤，建议一个能力名称（5-10字）和描述（20-40字）。"
@@ -36,7 +47,7 @@ def suggest_capability_meta(steps: List[Dict]) -> Dict[str, str]:
 def suggest_step_description(step: Dict, tcode: str) -> str:
     """单步请求：用一句中文描述操作，≤20字。"""
     msg = _get_client().messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=_get_model(),
         max_tokens=50,
         messages=[{"role": "user", "content": (
             f"用一句中文描述这个 SAP 操作，不超过20字：\n"
@@ -51,7 +62,7 @@ def suggest_step_description(step: Dict, tcode: str) -> str:
 def suggest_param_name(field_path: str) -> str:
     """根据 SAP 字段路径推断 snake_case 参数名。LLM 失败时回退到路径末段。"""
     msg = _get_client().messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=_get_model(),
         max_tokens=20,
         messages=[{"role": "user", "content": (
             f"SAP 字段路径 '{field_path}' 对应的英文参数名是什么？"

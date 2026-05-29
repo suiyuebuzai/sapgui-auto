@@ -12,8 +12,19 @@ _client: Optional[anthropic.Anthropic] = None
 def _get_client() -> anthropic.Anthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic()
+        import os
+        api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        base_url = os.environ.get("ANTHROPIC_BASE_URL")
+        kwargs = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        _client = anthropic.Anthropic(**kwargs)
     return _client
+
+
+def _get_model() -> str:
+    import os
+    return os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 
 def load_tools(config_path: str = "sap_capabilities.yaml") -> List[Dict[str, Any]]:
@@ -53,7 +64,7 @@ def chat(
 
     while True:
         resp = _get_client().messages.create(
-            model="claude-sonnet-4-6",
+            model=_get_model(),
             max_tokens=1024,
             tools=tools,
             messages=messages,
